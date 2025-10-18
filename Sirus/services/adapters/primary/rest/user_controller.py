@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from typing import Callable
+from starlette.responses import JSONResponse
 
-from core.domain.user import User
-from core.usecases.user_management import UserManagementService
+from services.core.domain.user import User
+from services.core.usecases.user_management import UserManagementService
 
-from infrastructure.security.auth_middleware import get_current_user
+from services.infrastructure.security.auth_middleware import get_current_user
 from .user_schemas import (
     UserRegistrationRequest,
     UserLoginRequest,
@@ -46,25 +46,38 @@ def register(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.post('/login', response_model=TokenResponse, summary='Авторизация пользователя')
+@router.post('/login', summary='Авторизация пользователя')
 def login(
     # request: UserLoginRequest,
-    request: OAuth2PasswordRequestForm = Depends(),
+    request: UserLoginRequest,
     service: UserManagementService = Depends(get_user_management_service)
 ):
-    """Возможность входа по почте и паролю. Возвращает JWT токен"""
+    """Возможность входа по почте и паролю. Устанавливает JWT в httponly cookie"""
     try:
         token = service.authenticate(
-            email=request.username,
+            email=request.email,
             password=request.password
         )
-        return TokenResponse(access_token=token)
+
+        response_data = {'access_token': token, 'token_type': 'bearer'}
+        response = JSONResponse(content=response_data)
+
+        response.set_cookie(
+            key='access_token',
+            value=token,
+            httponly=True,
+            samesite='lax',
+            secure=False,
+            max_age=3600 * 24 * 7
+        )
+        return response
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e), headers={'WWW-Authenticate': 'Bearer'})
     
 @router.get('/me', response_model=UserResponse, summary='Получить информацию о себе')
 def read_users_me(
     current_user: User = Depends(get_current_user)
+    
 ):
     """Получение информации о текущем аутентифицированном пользователе"""
     return UserResponse.model_validate(current_user)
@@ -72,7 +85,23 @@ def read_users_me(
 
 @router.put('/update', response_model=UserResponse, summary='Изменить информацию о себе')
 def update_users_me(
-    current_user: User = Depends(get_current_user)
+    request: UserUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    service: UserManagementService = Depends(get_user_management_service)
 ):
-    """Изменение информации о текущем аутентифицированном пользователе"""
+    """Изменение информации о текущем аутентифицированном пользователе. Смена пароля требует текущий пароль"""
+
+    update_data = request.model_dump(exclude_none=True)
+
+    if not update_data or all(k.startswith('current') for k in update_data.keys()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Не переданы данные для обновления')
+    
+    try:
+        updated_user = service.update_profile(current_user.user_id, update_data)
+        return UserResponse.model_validate(updated_user)
+    
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     

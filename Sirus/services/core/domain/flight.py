@@ -14,7 +14,7 @@ class Flight:
     price: float
     total_seats: int
     booked_seats: int = 0
-    flight_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    flight_id: Optional[str] = None
 
     @property
     def available_seats(self):

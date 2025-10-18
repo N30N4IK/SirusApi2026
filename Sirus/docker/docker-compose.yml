@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # --- 1. PostgreSQL Database ---
+  db:
+    image: postgres:14-alpine
+    container_name: booking_postgres
+    restart: always
+    environment:
+      # Учетные данные для PostgreSQL
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2312
+      POSTGRES_DB: user-db
+    volumes:
+      # Сохранение данных между перезапусками
+      - postgres_data:/var/lib/postgresql/data/
+    healthcheck: # Проверка здоровья БД
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- 2. FastAPI Application ---
+  api:
+    build:
+      # Контекст: project_root (один уровень выше)
+      context: ..  
+      # Путь к Dockerfile относительно контекста
+      dockerfile: docker/Dockerfile
+    container_name: booking_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      # КРИТИЧНО: Хост БД должен быть именем сервиса ('db')
+      DATABASE_URL: postgresql://postgres:2312@db:5432/user-db
+      SECRET_KEY: "your_long_and_complex_jwt_secret" 
+      # Можно передать другие ENV-переменные, если они нужны в коде
+    
+    # Зависимость от БД
+    depends_on:
+      db:
+        condition: service_healthy # Ждем, пока БД не станет полностью готовой
+        
+    # Команда запуска Uvicorn. Убрали 'sleep', так как используем healthcheck.
+    command: ["uvicorn", "services.infrastructure.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+volumes:
+  postgres_data:

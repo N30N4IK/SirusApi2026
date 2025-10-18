@@ -1,36 +1,39 @@
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 from typing import Callable
-
-from core.usecases.user_management import UserManagementService
-from core.usecases.hotel_management import HotelManagementService
-from core.usecases.flight_search import FlightSearchService
-from core.ports.out.user_repo import UserRepository
-from core.ports.out.hotel_repo import HotelRepository
-from core.ports.out.notification_port import NotificationPort
-
-from adapters.secondary.db.user_repository import SQLAlchemyUserRepository
-from adapters.secondary.db.hotel_repository import SQLAlchemyHotelRepository
-from adapters.secondary.db.flight_repository import SqlAlchemyFlightRepository
-from adapters.secondary.notification.email_adapter import EmailAdapter
-
-from infrastructure.database.connection import SessionLocal, create_db_and_tables
-import infrastructure.security.auth_middleware 
-
-from adapters.primary.rest import user_controller
-from adapters.primary.rest import hotel_controller
-from adapters.primary.rest import room_controller
-from adapters.primary.rest import flight_controller
+# Коры
+from services.core.usecases.user_management import UserManagementService
+from services.core.usecases.hotel_management import HotelManagementService
+from services.core.usecases.flight_search import FlightSearchService
+from services.core.usecases.room_booking import RoomBookingService
+from services.core.ports.out.user_repo import UserRepository
+from services.core.ports.out.hotel_repo import HotelRepository
+from services.core.ports.out.notification_port import NotificationPort
+from services.core.ports.out.booking_repo import BookingRepository
+# Адаптеры
+from services.adapters.secondary.db.user_repository import SQLAlchemyUserRepository
+from services.adapters.secondary.db.hotel_repository import SQLAlchemyHotelRepository
+from services.adapters.secondary.db.flight_repository import SqlAlchemyFlightRepository
+from services.adapters.secondary.db.booking_repository import SQLAlchemyBookingRepository
+from services.adapters.secondary.notification.email_adapter import EmailAdapter
+# Инфраструктура
+from services.infrastructure.database.connection import SessionLocal, create_db_and_tables
+import services.infrastructure.security.auth_middleware as auth_middleware_module
+# Еще адаптеры
+from services.adapters.primary.rest import user_controller
+from services.adapters.primary.rest import hotel_controller
+from services.adapters.primary.rest import room_controller
+from services.adapters.primary.rest import flight_controller
+from services.adapters.primary.rest import booking_controller
 
 SessionLocalFactory: Callable[..., Session] = SessionLocal
 
 user_repository_instance: UserRepository = SQLAlchemyUserRepository(
-    session_factory=SessionLocalFactory
-)
+    session_factory=SessionLocalFactory)
 hotel_repository_instance: HotelRepository = SQLAlchemyHotelRepository(
-    session_factory=SessionLocalFactory
-)
-
+    session_factory=SessionLocalFactory)
+booking_repository_instance: BookingRepository = SQLAlchemyBookingRepository(
+    session_factory=SessionLocalFactory)
 notification_adapter_instance: NotificationPort = EmailAdapter()
 
 user_management_service_instance: UserManagementService = UserManagementService(
@@ -47,6 +50,12 @@ flight_search_service_instance = FlightSearchService(
     flight_repo=flight_repository_instance
 )
 
+room_booking_service_instance: RoomBookingService = RoomBookingService(
+    booking_repo=booking_repository_instance,
+    hotel_repo=hotel_repository_instance,
+    notification_port=notification_adapter_instance
+)
+
 def get_user_management_service_dependency() -> UserManagementService:
     """Провайдер для сервиса UserManagement."""
     return user_management_service_instance
@@ -57,15 +66,18 @@ def get_hotel_management_service_dependency() -> HotelManagementService:
 
 def get_user_repo_dependency() -> UserRepository:
     """Провайдер для репозитория пользователей (используется в Auth Middleware)."""
-    print("--- DEBUG: get_user_repo_dependency CALLED ---")
     return user_repository_instance
 
 def get_flight_search_service_dependency() -> FlightSearchService:
     return flight_search_service_instance
 
+def get_room_booking_service_dependency() -> RoomBookingService:
+    return room_booking_service_instance
+
+
 app = FastAPI(
-    title='Booking Aggregator API',
-    description="Hexagonal architecture implementation for booking services."
+    title='Sirus Hexagonal API',
+    description="Hexagonal architecture"
 )
 
 
@@ -82,18 +94,22 @@ app.dependency_overrides[
 ] = get_hotel_management_service_dependency
 
 app.dependency_overrides[
-    infrastructure.security.auth_middleware.get_user_repo
-] = get_user_repo_dependency
-
-app.dependency_overrides[
     flight_controller.get_flight_search_service
 ] = get_flight_search_service_dependency
 
+app.dependency_overrides[
+    booking_controller.get_room_booking_service
+] = get_room_booking_service_dependency
+
+app.dependency_overrides[
+    auth_middleware_module.get_user_repo
+] = get_user_repo_dependency
 
 app.include_router(user_controller.router)
 app.include_router(hotel_controller.router)
 app.include_router(room_controller.router)
 app.include_router(flight_controller.router)
+app.include_router(booking_controller.router)
 
 @app.on_event('startup')
 def on_startup():

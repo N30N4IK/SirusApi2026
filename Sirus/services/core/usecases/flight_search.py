@@ -1,5 +1,5 @@
-from core.ports.out.flight_repo import FlightRepository
-from core.domain.flight import Flight, TicketRoute, RouteSegment
+from services.core.ports.out.flight_repo import FlightRepository
+from services.core.domain.flight import Flight, TicketRoute, RouteSegment
 from typing import List, Optional, Dict, Tuple, Any
 from datetime import date, timedelta, datetime
 import uuid
@@ -10,6 +10,9 @@ class FlightSearchService:
     def __init__(self, flight_repo: FlightRepository):
         self._repo = flight_repo
 
+    def list_all_flights(self) -> List[Flight]:
+        """Возвращает все рейсы в системе"""
+        return self._repo.get_all_flights()
     
     def _find_connecting_routes(self, origin: str, destination: str, start_date: date, passengers: int) -> List[TicketRoute]:
         """Находит все возодные маршруты с 0, 1 или 2 пересадки, соблюдая ограничение на время пересадки (<24 часа). Использует BFS (Breadth-First Search) для поиска по уровням (пересадкам)"""
@@ -54,7 +57,13 @@ class FlightSearchService:
                     flight.arrival_time,
                     new_segments
                 ))
+        if origin == destination: # Защита от поиска в том же городе
+            return []
 
+        # ... (Далее логика BFS) ...
+        
+        # ПРОВЕРКА: Если здесь нет пути, routes = []
+        print(f"DEBUG GRAPH: Found {len(routes)} possible routes.")
         return routes
     
     def search_flights(self, origin_city: str, destination_city: str, date: date, passengers: int) -> List[Dict[str, Any]]:
@@ -101,8 +110,10 @@ class FlightSearchService:
             is_special = bool(item['categories'])
             return (-is_special, item['total_cost'])
         
-        results.sort(key=custom_sort)
+        results.sort(key=custom_sort)     
 
+        return results
+    
     # --- CRUD ---
 
     def create_flight(self, data: Dict[str, Any]) -> Flight:
@@ -111,3 +122,5 @@ class FlightSearchService:
     
     def delete_flight(self, flight_id: str) -> None:
         self._repo.delete_flight(flight_id)
+
+    

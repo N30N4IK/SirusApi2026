@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from core.domain.user import User
+from services.core.domain.user import User
 
 class UserRepository(ABC):
     @abstractmethod

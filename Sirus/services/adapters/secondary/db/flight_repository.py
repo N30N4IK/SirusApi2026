@@ -4,10 +4,10 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, asc, desc
 
-from core.ports.out.flight_repo import FlightRepository
-from core.domain.flight import Flight
-from infrastructure.database.models import FlightORM
-from infrastructure.database.connection import SessionLocal
+from services.core.ports.out.flight_repo import FlightRepository
+from services.core.domain.flight import Flight
+from services.infrastructure.database.models import FlightORM
+from services.infrastructure.database.connection import SessionLocal
 
 
 class SqlAlchemyFlightRepository(FlightRepository):
@@ -30,10 +30,16 @@ class SqlAlchemyFlightRepository(FlightRepository):
             booked_seats=orm.booked_seats
         )
     
+    def get_all_flights(self) -> List[Flight]:
+        """Возвращает список всех существующих рейсов"""
+        with self._get_session() as session:
+            all_flights_orm = session.query(FlightORM).all()
+            return [self._to_domain(f) for f in all_flights_orm]
+
     def save_flight(self, flight: Flight) -> Flight:
         """Создает или обновляет рейс"""
         with self._get_session() as session:
-            if not flight.flight_id:
+            if flight.flight_id is None:
                 flight.flight_id = str(uuid.uuid4())
                 orm = FlightORM(**flight.__dict__)
                 session.add(orm)
@@ -55,18 +61,27 @@ class SqlAlchemyFlightRepository(FlightRepository):
             session.query(FlightORM).filter(FlightORM.flight_id == flight_id).delete()
             session.commit()
 
-    def find_flight_by_criteria(self, origin: str, search_date: date, passengers: int) -> List[Flight]:
+    def find_flights_by_criteria(self, origin: str, search_date: date, passengers: int) -> List[Flight]:
         """Находит все рейсы, вылетающие из указанного города, в диапозоне 48 часов от даты поиска, с достаточным кол-вом мест"""
-        start_datetime = datetime.combine(search_date, datetime.min.time() - timedelta(days=1))
-        end_datetime = datetime.combine(search_date, datetime.max.time() + timedelta(days=1))
+        start_of_search_date = datetime.combine(search_date, datetime.min.time())
+        start_datetime = start_of_search_date - timedelta(hours=24) # 24 часа до
+        end_datetime = start_of_search_date + timedelta(hours=48)  # 48 часов после
 
         with self._get_session() as session:
             query = session.query(FlightORM).filter(
                 FlightORM.departure_time >= start_datetime,
                 FlightORM.departure_time <= end_datetime,
-                (FlightORM.total_seats - FlightORM.booked_seats) >= passengers
+                # (FlightORM.total_seats - FlightORM.booked_seats) >= passengers
             )
-
+            results = query.all()
+            print(f"DEBUG REPO: Found {len(results)} raw flights in date range.") # <-- ПРИНТ 1
+            
+            # Теперь восстановим фильтр по местам
+            final_flights = [
+                self._to_domain(f) for f in results 
+                if (f.total_seats - f.booked_seats) >= passengers
+            ]
+            print(f"DEBUG REPO: Found {len(final_flights)} flights after passenger check.") # <-- ПРИНТ 2
             return [self._to_domain(f) for f in query.all()]
         
     def update_booked_seats(self, flight_id: str, count: int) -> None:

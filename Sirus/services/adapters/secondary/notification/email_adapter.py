@@ -1,8 +1,8 @@
 from typing import Dict, Any
-from core.ports.out.notification_port import NotificationPort
+from services.core.ports.out.notification_port import NotificationPort
 
 class EmailAdapter(NotificationPort):
-    """Реализация порта уведомлений с использованием smtp"""
+    """Реализация порта уведомлений (временно без smpt)"""
 
 
     def send_booking_confirmation(self, recipient_email: str, booking_details: Dict[str, Any]) -> None:

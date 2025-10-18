@@ -17,7 +17,7 @@ class Room:
     capacity: int
     rooms_count: int
     price_per_night: float
-    room_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    room_id: Optional[str] = None
 
 @dataclass
 class Hotel:
@@ -25,4 +25,4 @@ class Hotel:
     city: str
     stars: int
     description: str
-    hotel_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    hotel_id: Optional[str] = None

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from core.domain.user import Role
+from services.core.domain.user import Role
+from typing import Optional
 
 class UserRegistrationRequest(BaseModel):
     email: EmailStr
@@ -14,6 +15,7 @@ class UserRegistrationRequest(BaseModel):
         if len(v) > 72:
             raise ValueError('Пароль максимум 72 символа')
         return v
+    
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -23,7 +25,10 @@ class TokenResponse(BaseModel):
     token_type: str = 'bearer'
 
 class UserUpdateRequest(BaseModel):
-    new_username: str
+    new_username: Optional[str] = None
+    new_email: Optional[EmailStr] = None
+    new_password: Optional[str] = None
+    current_password: Optional[str] = None
 
 class UserResponse(BaseModel):
     """Схема отправки данных пользователю клиенту"""

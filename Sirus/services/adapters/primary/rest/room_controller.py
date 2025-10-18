@@ -1,8 +1,8 @@
 from fastapi import APIRouter, status, Depends, HTTPException, Query
 from typing import Optional, List
-from core.usecases.hotel_management import HotelManagementService
-from core.domain.hotel import RoomType
-from infrastructure.security.auth_middleware import admin_required
+from services.core.usecases.hotel_management import HotelManagementService
+from services.core.domain.hotel import RoomType
+from services.infrastructure.security.auth_middleware import admin_required
 from .hotel_schemas import RoomCreateUpdate, RoomResponse
 
 
@@ -30,7 +30,8 @@ def list_rooms(
     }
 
     rooms = service.list_rooms(filters=filters, sort_by=sort_by)
-    return [RoomResponse.model_validate(r) for r in rooms]
+    from dataclasses import asdict
+    return [RoomResponse.model_validate(asdict(r)) for r in rooms]
 
 
 
@@ -49,7 +50,9 @@ def create_room(
             rooms_count=request.rooms_count,
             price=request.price_per_night
         )
-        return RoomResponse.model_validate(room)
+        from dataclasses import asdict
+        room_dict = asdict(room)
+        return RoomResponse.model_validate(room_dict)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     
@@ -74,6 +77,8 @@ def updat_room_endpoint(
 @router.delete('/{room_id}', status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_required)], summary='Админ: Удаление номера')
 def delete_room(room_id: str, service: HotelManagementService = Depends(get_hotel_management_service)):
     """Админ: Удаление номера"""
-    service.delete_room(room_id)
-    return
-
+    try:
+        service.delete_hotel(room_id)
+        return
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

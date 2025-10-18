@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
-from core.domain.hotel import Hotel, Room
+from services.core.domain.hotel import Hotel, Room
 
 class HotelRepository(ABC):
     """Интерфейс для работы с хранилищем отелей и номеров"""

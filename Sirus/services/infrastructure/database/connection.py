@@ -1,9 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import os
 
-DATABASE_URL = 'postgresql://postgres:2312@localhost/user-db'
-
-engine = create_engine(DATABASE_URL)
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    'postgresql://postgres:2312@localhost:5432/user-db'
+)
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_db_and_tables():

@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import date
-from core.domain.flight import Flight
+from services.core.domain.flight import Flight
 
 class FlightRepository(ABC):
     """Интерфейс для работы с данными об авиарейсах"""
+
+    @abstractmethod
+    def get_all_flights(self, flight: Flight):
+        """Возвращает список всех существующих рейсов"""
+        raise NotImplementedError
 
     @abstractmethod
     def save_flight(self, flight: Flight) -> Flight:
@@ -18,7 +23,7 @@ class FlightRepository(ABC):
     
     
     @abstractmethod
-    def find_flight_by_criteria(self, origin: str, date: date, passengers: int) -> List[Flight]:
+    def find_flights_by_criteria(self, origin: str, date: date, passengers: int) -> List[Flight]:
         """находит все подходящие рейсы, вылетающие из указанного города в районе указанной даты, с достаточным кол-вом мест"""
         raise NotImplementedError
     

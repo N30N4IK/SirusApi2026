@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from core.domain.hotel import RoomType
+from services.core.domain.hotel import RoomType
 
 class HotelCreateUpdate(BaseModel):
     name: str
@@ -32,7 +32,7 @@ class HotelResponse(BaseModel):
     name: str
     city: str
     stars: int
-    desctiprion: str
+    description: str
 
     class Config: from_attributes = True
 

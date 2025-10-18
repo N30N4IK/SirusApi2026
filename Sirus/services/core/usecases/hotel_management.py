@@ -1,5 +1,5 @@
-from core.ports.out.hotel_repo import HotelRepository
-from core.domain.hotel import Hotel, Room, RoomType
+from services.core.ports.out.hotel_repo import HotelRepository
+from services.core.domain.hotel import Hotel, Room, RoomType
 from typing import List, Optional, Dict, Any
 
 class HotelManagementService:
@@ -30,12 +30,14 @@ class HotelManagementService:
         return self._repo.save_hotel(hotel)
     
     def delete_hotel(self, hotel_id: str) -> None:
-        self._repo.delete_hotel(hotel_id)
-
+        try:
+            self._repo.delete_hotel(hotel_id)
+        except ValueError as e:
+            raise ValueError(f'Ошибка удаления отеля: {e}')
 
 
     def create_room(self, hotel_id: str, room_number: str, room_type: RoomType, capacity: int, rooms_count: int, price: float) -> Room:
-        if not self._repo.get_room_by_id(hotel_id):
+        if not self._repo.get_hotel_by_id(hotel_id):
             raise ValueError('Номер не надйен')
         
         room = Room(
@@ -44,12 +46,15 @@ class HotelManagementService:
             room_type=room_type,
             capacity=capacity,
             rooms_count=rooms_count,
-            price_pre_night=price
+            price_per_night=price
         )
         return self._repo.save_room(room)
     
     def delete_room(self, room_id: str) -> None:
-        self._repo.delete_room(room_id)
+        try:
+            self._repo.delete_room(room_id)
+        except ValueError as e:
+            raise ValueError(f'Ошибка удаления номера: {e}')
 
     def update_room(self, room_id: str, data: Dict[str, Any]) -> Room:
         room = self._repo.get_room_by_id(room_id)

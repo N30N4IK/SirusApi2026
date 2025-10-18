@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, Enum, ForeignKey, Integer, Float, DateTime
+from sqlalchemy import Column, String, Enum, ForeignKey, Integer, Float, DateTime, Boolean, Date
 from sqlalchemy.orm import declarative_base, relationship
 
-from core.domain.hotel import RoomType
-from core.domain.user import Role
+from services.core.domain.hotel import RoomType
+from services.core.domain.user import Role
 Base = declarative_base()
 
 
@@ -52,3 +52,17 @@ class FlightORM(Base):
     price = Column(Float, nullable=False)
     total_seats = Column(Integer, nullable=False)
     booked_seats = Column(Integer, default=0, nullable=False)
+
+class HotelBookingORM(Base):
+    __tablename__ = 'hotel_bookings'
+    booking_id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey('users.user_id'), nullable=False)
+    room_id = Column(String, ForeignKey('rooms.room_id'), nullable=False)
+    check_in_date = Column(Date, nullable=False)
+    check_out_date = Column(Date, nullable=False)
+    total_price = Column(Float, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    user = relationship('UserORM')
+    room = relationship('RoomORM')
+    

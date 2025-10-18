@@ -4,10 +4,10 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from core.domain.user import User
-from core.ports.out.user_repo import UserRepository
-from infrastructure.database.models import UserORM
-from infrastructure.database.connection import SessionLocal
+from services.core.domain.user import User
+from services.core.ports.out.user_repo import UserRepository
+from services.infrastructure.database.models import UserORM
+from services.infrastructure.database.connection import SessionLocal
 
 
 class SQLAlchemyUserRepository(UserRepository):
@@ -55,12 +55,14 @@ class SQLAlchemyUserRepository(UserRepository):
                 return self._to_domain(orm_user)
             return None
     
-    def get_by_id(self, user: str) -> Optional[User]:
+    def get_by_id(self, user_id: str) -> Optional[User]:
+        clean_user = user_id
         with self._get_session() as session:
-            orm_user = session.query(UserORM).filter(UserORM.user_id == id).first()
-            if not orm_user:
-                return "Пользователь не найден после обновления"
-            
+            session.expire_all()
+            orm_user = session.query(UserORM).filter(UserORM.user_id == clean_user).first()
+            if orm_user:
+                return self._to_domain(orm_user)
+            return None
 
     def update(self, user: User) -> None:
         with self._get_session() as session:

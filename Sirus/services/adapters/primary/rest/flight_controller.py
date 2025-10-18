@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional, Dict, Any
 from datetime import date
+from dataclasses import asdict
 
-from core.usecases.flight_search import FlightSearchService
-from infrastructure.security.auth_middleware import admin_required
+from services.core.domain.user import User
+from .flight_schemas import FlightCreate as FlightResponseSchema
+from services.core.usecases.flight_search import FlightSearchService
+from services.infrastructure.security.auth_middleware import admin_required, get_current_user
 from .flight_schemas import FlightCreate, FlightUpdate, TicketRouteResponse
 
 router = APIRouter(prefix='/flights', tags=['Flights'])
@@ -11,11 +14,11 @@ router = APIRouter(prefix='/flights', tags=['Flights'])
 def get_flight_search_service() -> FlightSearchService:
     raise NotImplementedError
 
-@router.get('/search', summary='Поиск авиабилетов (пряммые и с пересадкамми)')
+@router.get('/search', summary='Поиск авиабилетов (прямые и с пересадкамми)')
 def search_flights_endpoint(
     origin: str = Query(..., description='Город отправления'),
     destination: str = Query(..., description='Город назначения'),
-    departure_date: date = Query(..., description='Дата вылета'),
+    departure_date: date = Query(..., description='Дата вылета (YYY-MM-DD)'),
     passengers: int = Query(..., description='Кол-во пассажиров'),
     service: FlightSearchService = Depends(get_flight_search_service)
 ):
@@ -31,10 +34,16 @@ def search_flights_endpoint(
         return results
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        print(f'fatal error: {e}')
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Internal server error during search')
     
+@router.get('/', response_model=List[FlightResponseSchema], summary='Получить списов всех рейсов (Админ/Просмотр)')
+def get_all_flights_endpoint(
+    current_user: User = Depends(get_current_user),
+    service: FlightSearchService = Depends(get_flight_search_service)
+):
+    """Возвращает списов всех авиарейсов в системе"""
+    flights = service.list_all_flights()
+
+    return [FlightResponseSchema.model_validate(asdict(f)) for f in flights]
 
 # --- CRUD ---
 
