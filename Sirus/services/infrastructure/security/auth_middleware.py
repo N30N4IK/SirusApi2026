@@ -21,8 +21,6 @@ def create_access_token(user_id: str, role: Role):
     to_encode.update({'exp': expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# token: str = Depends(oauth2_scheme)
-
 def get_token_from_cookie(request: Request) -> Optional[str]:
     """Извлекает токен из cookie, если он там есть"""
     return request.cookies.get('access_token')

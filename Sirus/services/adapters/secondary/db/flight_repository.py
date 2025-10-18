@@ -71,17 +71,13 @@ class SqlAlchemyFlightRepository(FlightRepository):
             query = session.query(FlightORM).filter(
                 FlightORM.departure_time >= start_datetime,
                 FlightORM.departure_time <= end_datetime,
-                # (FlightORM.total_seats - FlightORM.booked_seats) >= passengers
             )
             results = query.all()
-            print(f"DEBUG REPO: Found {len(results)} raw flights in date range.") # <-- ПРИНТ 1
             
-            # Теперь восстановим фильтр по местам
             final_flights = [
                 self._to_domain(f) for f in results 
                 if (f.total_seats - f.booked_seats) >= passengers
             ]
-            print(f"DEBUG REPO: Found {len(final_flights)} flights after passenger check.") # <-- ПРИНТ 2
             return [self._to_domain(f) for f in query.all()]
         
     def update_booked_seats(self, flight_id: str, count: int) -> None:

@@ -48,7 +48,6 @@ def register(
 
 @router.post('/login', summary='Авторизация пользователя')
 def login(
-    # request: UserLoginRequest,
     request: UserLoginRequest,
     service: UserManagementService = Depends(get_user_management_service)
 ):

@@ -57,13 +57,8 @@ class FlightSearchService:
                     flight.arrival_time,
                     new_segments
                 ))
-        if origin == destination: # Защита от поиска в том же городе
+        if origin == destination: 
             return []
-
-        # ... (Далее логика BFS) ...
-        
-        # ПРОВЕРКА: Если здесь нет пути, routes = []
-        print(f"DEBUG GRAPH: Found {len(routes)} possible routes.")
         return routes
     
     def search_flights(self, origin_city: str, destination_city: str, date: date, passengers: int) -> List[Dict[str, Any]]:
