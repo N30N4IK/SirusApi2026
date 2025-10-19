@@ -29,16 +29,25 @@
 
 1.  Установлен Docker Desktop (включая Docker Compose).
 2.  Установлен Python 3.13+.
+3.  Установлен PostgreSQL и создана база данных 
 
 ### 2. Сборка и запуск через Docker Compose
 
 Для запуска приложения вместе с базой данных PostgreSQL используйте Docker Compose.
+
+
+!!! Сначала замените данные от базы данных в файлах docker-compose.yml (docker/) и connection.py (services/infrastructure/database/) на необходимые для проверки !!! 
+
 
 **A. Сборка и запуск:**
 Перейдите в корневой каталог проекта (где находится `docker-compose.yml`) и выполните команду:
 
 ```bash
 docker-compose up --build
+```
+или
+```bash
+docker compose up --build
 ```
 
 **B. Проверка:**
@@ -67,7 +76,7 @@ docker exec -it booking_api python services/scripts/setup_db.py
 | `POST /users/login` | Вход (email/password). Устанавливает токен в `HttpOnly` Cookie. |
 | `GET /users/me` | Получение информации о текущем пользователе. |
 
-**Важно:** Для тестирования используйте учетные данные администратора (`admin@booking.com` и пароль, который вы ввели в `setup_db.py`).
+**Важно:** Для тестирования используйте учетные данные администратора (`admin@booking.com` и пароль, который вы ввели при запуске `setup_db.py`).
 
 ### 2. Тестирование Hotel Service (CRUD для Admins)
 
